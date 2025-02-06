@@ -2,16 +2,15 @@
 Access to process variable of a [P2Plant](https://github.com/ASukhanov/P2Plant).
 
 ## Demo
-Start simulatedADCs plant as discribed in P2Plant module:<br>
+Start simulatedADCs plant as discribed in the P2Plant module:<br>
 Start the client:<br>
 ``` python3 -m p2plantaccess.simulatedADCs -k -g```<br>
 A dynamic plot should appear with 8 sawtooth curves.
 
 ### Example of Python interaction with simulatedADCs
 Have the simulatedADCs plant running.
-
-from p2plantaccess import Access as pa
 ```python
+from p2plantaccess import Access as pa
 pa.init()
 pa.start()
 
@@ -20,12 +19,6 @@ pa.request(["info", ["*"]])
 
 pa.request(["get", ["version"]])
 {'version': {'v': 'MCU: STM32G431, soft:0.2.0 2025-02-02, clock:170000000,baudrate:7372800', 't': (1738803674, 976149845)}}
-
-pa.request(["info", ["sleep"]])
-{'sleep': {'desc': 'Sleep in the program loop', 'type': 'uint32', 'shape': [1], 'fbits': 'R', 'units': 'ms', 'opLow': 0, 'opHigh': 10000}}
-
-pa.request(["get", ["sleep"]])
-{'sleep': {'v': 1, 't': (1738803674, 976150354)}}
 
 # Get info on run and sleep PVs:
 pa.request(['info', ['run','sleep']])
