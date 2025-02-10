@@ -2,15 +2,14 @@
 Usage:
 $ python3
 from p2plantaccess import Access as pa
-pa.init()
-pa.start()
+pa.init(); pa.start()
 pa.request(["info", ["*"]])
 pa.request(["get", ['run',"version"]])
   or:
 pa.request('["get", ["run","version"]]')
 pa.request(['set', [('run','stop')]])
 """
-__version__ = 'v1.0.1 2025-02-06'#
+__version__ = 'v1.0.2 2025-02-08'# import cbor2 as cbor.
 print(f'p2plantAccess {__version__}')
 
 import time
@@ -18,7 +17,8 @@ import threading
 from collections import deque
 import numpy as np
 from json import loads
-import cbor2
+import cbor2 as cbor
+#import cbor
 
 dtype = {# map of CBOR tags to numpy dtype
     72: "int8",
@@ -72,7 +72,7 @@ class Access:
         while Access.started:
             bbuf = Access.transport.recv()
             printv(f'Received a message[{len(bbuf)}]: {bbuf}')
-            Access.receivedList = cbor2.loads(bbuf)
+            Access.receivedList = cbor.loads(bbuf)
             if len(Access.receivedList) > 0\
               and Access.receivedList[0] == 'Subscription':
                 printv(f'Subscriptions: {Access.receivedList}')
@@ -90,14 +90,16 @@ class Access:
         if not Access.started:
             printw("Receiver is not started")
             return 
-        cborobj = cbor2.dumps(request)
+        #cborobj = cbor.dumps(request, canonical=True)# expect more compact output, but it is not compatible with p2plant.
+        cborobj = cbor.dumps(request)
+        #print(f'send cbor: {cborobj}')
         Access.transport.send(cborobj)
         #print('')
 
     #def array(nparray):
     #    """Convert numpy array to CBORTag. For use in send()."""
     #    atag = tag[str(nparray.dtype)]
-    #    return cbor2.CBORTag(atag, nparray.tobytes())
+    #    return cbor.CBORTag(atag, nparray.tobytes())
 
     def recv(what:str = 'reply', blocking='block'):
         """Receive data, the what could be 'reply' or 'Subscription'.
@@ -153,7 +155,7 @@ class Access:
         for par,parmap in inmap.items():
             outmap[par] = {}
             for key,v in parmap.items():
-                if isinstance(v, cbor2.CBORTag):
+                if isinstance(v, cbor.CBORTag):
                     v = np.frombuffer(v.value, dtype[v.tag])
                     if key == 'v':
                         shape = parmap.get('shape')
