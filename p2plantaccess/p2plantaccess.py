@@ -9,7 +9,7 @@ pa.request(["get", ['run',"version"]])
 pa.request('["get", ["run","version"]]')
 pa.request(['set', [('run','stop')]])
 """
-__version__ = 'v1.0.2 2025-02-08'# import cbor2 as cbor.
+__version__ = 'v1.0.3 2025-02-16'# Input is functional, error handling, 
 print(f'p2plantAccess {__version__}')
 
 import time
@@ -176,9 +176,13 @@ class Access:
 
     def request(obj):
         """Send object or text to IPC queue and receive/decode the reply"""
-        try:
-            if isinstance(obj, str):
+        if isinstance(obj, str):
+            try:
                 obj = loads(obj)
+            except Exception as e:
+                printe(f"Failed to encode string '{obj}' to json: {e}")
+                return {}
+        try:
             printv(f'Sending obj: {obj}')
             Access.send(obj)
             Access.recv()
@@ -188,4 +192,3 @@ class Access:
         except Exception as e:
             printe(f'Sending {obj}: {e}')
             return {}
-
