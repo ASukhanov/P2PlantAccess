@@ -1,6 +1,6 @@
 """Example of communication with P2Plant simulatedADCs.
 """
-__version__ = 'v1.0.1 2025-02-03'#
+__version__ = 'v1.0.3 2025-02-16'#input is working now, cleanup, time.sleep(.000001)#ISSUE, 
 print(f'Version {__version__}')
 import sys, time, os
 import threading
@@ -21,7 +21,7 @@ def croppedText(txt, limit=200):
         txt = txt[:limit]+'...'
     return txt
 
-def printi(msg): print(f'INF@{printTime()}: {msg}')
+def printi(msg, end=''): print(f'INF@{printTime()}: {msg}', end=end)
 
 def printw(msg):
     msg = croppedText(msg)
@@ -32,25 +32,9 @@ def printe(msg):
     print(f'ERR@{printTime()}: {msg}')
 
 def _printv(msg, level=0):
-    if pargs.verbose is None:
-        return
-    if len(pargs.verbose) >= level:
-        print(msg)
-def printv(msg):   _printv(msg, 0)
-def printvv(msg):  _printv(msg, 1)
-
-def text_request(text:str):
-    try:
-        obj = loads(text)
-        printv(f'Sending obj: {obj}')
-        PA.send(obj)
-        PA.recv()
-        r = PA.decode()
-        printv(f'rcv: {r}')
-        return r
-    except Exception as e:
-        print(f'ERR: sending {text}: {e}')
-        return {}
+    if pargs.verbose >= level: print(f'DBG{level}: {msg}')
+def printv(msg):   _printv(msg, 1)
+def printvv(msg):  _printv(msg, 2)
 
 curves = []
 lasttime = time.time()
@@ -70,28 +54,35 @@ def receive_subscription():
         if not pargs.graph == '':
             TextItem.setText(txt)
         if not pargs.quiet: 
-            printi(txt)
+            printi(txt, end='\n>')
         fps = 0
     r = PA.recv('subscription','nonblocking')
     if len(r) == 0:
+        #printv(f'no data, fps: {fps}')
+        time.sleep(.000001)#ISSUE: if return without any system call, then the cycle rate is slow, same as with -g and CPU=100%. Is this QT issue? With this microsleep the CPU=26% and trig rate=frame. 
         return
     try:
         # data received
         fps += 1
+        printv(f'data received, fps: {fps}')
         decoded = PA.decode()
-        printv(f'data received: {decoded}')
-        try:    data = decoded['adc']['v']
-        except: return
+        if pargs.verbose >= 2:
+            printv(f'decoded: {decoded}')
+        try:    data = decoded['adcs']['v']
+        except KeyError:
+            printe(f'PV not delivered: adcs')
+            sys.exit(1)
         lx = len(data[0])
         #x = np.arange(lx)/adc_srate
         x= np.arange(lx)
-        printv(f'Data:[{len(data)}]:\n{data}')
+        #printv(f'Data:[{len(data)}]:\n{data}')
         if pargs.graph == '':
             return
         if len(curves) == 0:
             for idx,row in enumerate(data):
                 if pargs.graph is None or str(idx+1) in pargs.graph:
                     curve = pg.PlotCurveItem(pen=(idx,len(data)*1.3))
+                    printv(f'adding curve ADC{idx+1}')
                     plot.addItem(curve)
                     curves.append(curve)
                     legend.addItem(curve, f'ADC{idx+1}')
@@ -108,7 +99,12 @@ def receive_subscription():
 
 def input_thread():
     global LastCmd
-    print('Accepted commands: info, get, set.')
+    print(( 'Example commands:\n'
+            '````````````````````````\n'
+            '["info",["*"]]\n'
+            '["set",[["run","stop"]]]\n'
+            '["set",[["debug",2]]]\n'
+            ',,,,,,,,,,,,,,,,,,,,,,,,'))
     while(1):
         msg = input()
         if msg.encode() == UpArrow:
@@ -118,6 +114,7 @@ def input_thread():
         print(f'requested: {msg}')
         r = PA.request(msg)
         print(f'replied: {r}')
+        print('>',end='')
 #,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 #``````````````````Main function``````````````````````````````````````````````
 def main():
@@ -140,8 +137,8 @@ def main():
       'Transport interface')
     parser.add_argument('-u', '--yunits', default='', help=\
       'Units for Y-axis')
-    parser.add_argument('-v', '--verbose', nargs='*', help=\
-      'Show more log messages (-vv: show even more).')
+    parser.add_argument('-v', '--verbose', action='count', default=0, help=\
+      'Show more log messages (-vv: show even more)')
     parser.add_argument('-y', '--yscale', type=float, default=1., help=\
       'Y scale')
     parser.add_argument('-z', '--zoomin', help=\
@@ -168,7 +165,7 @@ def main():
             pg.setConfigOption('foreground', 'k')
         # the --zoom should be handled prior to QtWidgets.QApplication
         try:
-            print(f'argv: {sys.argv}')
+            #print(f'argv: {sys.argv}')
             idx = sys.argv.index('-z')
             zoom = sys.argv[idx+1]
             print(f'Zoom is set to {zoom}')
@@ -201,7 +198,7 @@ def main():
         
         timer = QtCore.QTimer()
         timer.timeout.connect(receive_subscription)
-        timer.start(0)
+        timer.start(1)
         app.exec_()
 
 if __name__ == "__main__":
