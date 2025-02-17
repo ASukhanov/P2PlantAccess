@@ -9,7 +9,7 @@ pa.request(["get", ['run',"version"]])
 pa.request('["get", ["run","version"]]')
 pa.request(['set', [('run','stop')]])
 """
-__version__ = 'v1.0.3 2025-02-16'# Input is functional, error handling, 
+__version__ = 'v1.0.3 2025-02-16'# Input is functional, error handling.
 print(f'p2plantAccess {__version__}')
 
 import time
