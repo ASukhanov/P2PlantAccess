@@ -9,7 +9,7 @@ pa.request(["get", ['run',"version"]])
 pa.request('["get", ["run","version"]]')
 pa.request(['set', [('run','stop')]])
 """
-__version__ = 'v1.0.3 2025-02-16'# Input is functional, error handling.
+__version__ = 'v1.0.4 2025-02-17'# recv blocking is bool
 print(f'p2plantAccess {__version__}')
 
 import time
@@ -101,9 +101,9 @@ class Access:
     #    atag = tag[str(nparray.dtype)]
     #    return cbor.CBORTag(atag, nparray.tobytes())
 
-    def recv(what:str = 'reply', blocking='block'):
+    def recv(what:str = 'reply', blocking=True):
         """Receive data, the what could be 'reply' or 'Subscription'.
-        if blocking=='block', the program will be blocked until arrival of 
+        if blocking==True, the program will be blocked until arrival of 
         new data"""
         #print(f'recv {what}, {blocking}')
         if not Access.started:
@@ -113,7 +113,7 @@ class Access:
             queue, evRcv = Access.queueAndEvents[what]
         except:
             return {'ERR':f'recv supports only {Access.queueAndEvents.keys()}'}
-        if blocking.startswith("block"):
+        if blocking:
             evRcv.wait()
         else:
             if not evRcv.is_set():
