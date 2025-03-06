@@ -94,7 +94,7 @@ class Transport:
             raise BufferError('in Transport.send.')
             msq.clear()
 
-    def recv(msgsize=1500):
+    def recv(msgsize=15000):
         msgtype=1; flag=0
         size = msgsize+8
         buf = create_string_buffer(size)
